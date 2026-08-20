@@ -35,9 +35,15 @@ export class StaffService {
     }
   }
 
-  async addWorker(createStaffDto: CreateStaffDto): Promise<Staff> {
+  async addWorker(
+    createStaffDto: CreateStaffDto,
+    photoPaths: string[] = [],
+  ): Promise<Staff> {
     try {
-      const newStaff = new this.staffModel(createStaffDto);
+      const newStaff = new this.staffModel({
+        ...createStaffDto,
+        photos: photoPaths,
+      });
       return await newStaff.save();
     } catch (err) {
       console.error(err);

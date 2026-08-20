@@ -1,0 +1,149 @@
+@baseUrl = http://localhost:3000
+@boundary = ----SalonBoundary123456
+
+### 1. Create staff — no photos
+POST {{baseUrl}}/staff
+Content-Type: multipart/form-data; boundary={{boundary}}
+
+--{{boundary}}
+Content-Disposition: form-data; name="name"
+
+Nino
+--{{boundary}}
+Content-Disposition: form-data; name="roles"
+
+stylist,colorist
+--{{boundary}}--
+
+### 2. Create staff — one photo
+POST {{baseUrl}}/staff
+Content-Type: multipart/form-data; boundary={{boundary}}
+
+--{{boundary}}
+Content-Disposition: form-data; name="name"
+
+Mariam
+--{{boundary}}
+Content-Disposition: form-data; name="roles"
+
+barber
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="photo1.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}--
+
+### 3. Create staff — multiple photos
+POST {{baseUrl}}/staff
+Content-Type: multipart/form-data; boundary={{boundary}}
+
+--{{boundary}}
+Content-Disposition: form-data; name="name"
+
+Levan
+--{{boundary}}
+Content-Disposition: form-data; name="roles"
+
+stylist
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="photo1.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="photo2.png"
+Content-Type: image/png
+
+< ./test-files/photo2.png
+--{{boundary}}--
+
+### 4. Create staff — non-image file (now accepted, no type checking)
+POST {{baseUrl}}/staff
+Content-Type: multipart/form-data; boundary={{boundary}}
+
+--{{boundary}}
+Content-Disposition: form-data; name="name"
+
+AnyFileTest
+--{{boundary}}
+Content-Disposition: form-data; name="roles"
+
+stylist
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="notes.txt"
+Content-Type: text/plain
+
+< ./test-files/notes.txt
+--{{boundary}}--
+
+### 5. Reject — too many photos (still enforced, MAX_PHOTOS_PER_STAFF = 5)
+POST {{baseUrl}}/staff
+Content-Type: multipart/form-data; boundary={{boundary}}
+
+--{{boundary}}
+Content-Disposition: form-data; name="name"
+
+TooManyPhotos
+--{{boundary}}
+Content-Disposition: form-data; name="roles"
+
+stylist
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="p1.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="p2.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="p3.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="p4.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="p5.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}
+Content-Disposition: form-data; name="photos"; filename="p6.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/photo1.jpg
+--{{boundary}}--
+
+### 6. Reject — non-multipart request
+POST {{baseUrl}}/staff
+Content-Type: application/json
+
+{
+  "name": "ShouldFail",
+  "roles": ["stylist"]
+}
+
+### 7. Get all staff
+GET {{baseUrl}}/staff
+
+### 8. Get one staff (replace with a real id from a previous response)
+GET {{baseUrl}}/staff/REPLACE_WITH_ID
+
+### 9. Update staff (JSON — PATCH is unchanged, no photo support here)
+PATCH {{baseUrl}}/staff/REPLACE_WITH_ID
+Content-Type: application/json
+
+{
+  "name": "Nino Updated",
+  "roles": ["stylist", "colorist", "makeup"]
+}
+
+### 10. Delete staff
+DELETE {{baseUrl}}/staff/REPLACE_WITH_ID

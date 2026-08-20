@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -6,23 +7,78 @@ import {
   Param,
   Delete,
   Patch,
+  Req,
 } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { StaffService } from './staff.service';
+import { UploadService } from '../upload/upload.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 
+const MAX_PHOTOS_PER_STAFF = 5;
+
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) {}
+  constructor(
+    private readonly staffService: StaffService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   @Get()
   findAll() {
     return this.staffService.findAll();
   }
 
+  // Accepts multipart/form-data: text fields (name, roles) plus zero or
+  // more "photos" file parts. Each photo is content-type checked and
+  // virus-scanned before it's ever written to disk; only clean files are
+  // saved, and only their paths go in the DB.
   @Post()
-  createStaff(@Body() createStaffDto: CreateStaffDto) {
-    return this.staffService.addWorker(createStaffDto);
+  async createStaff(@Req() req: FastifyRequest) {
+    if (!req.isMultipart()) {
+      throw new BadRequestException(
+        'Expected multipart/form-data (fields: name, roles, and optional photo files)',
+      );
+    }
+
+    const fields: Record<string, string | string[]> = {};
+    const photoPaths: string[] = [];
+
+    for await (const part of req.parts()) {
+      if (part.type === 'file') {
+        if (part.fieldname !== 'photos') {
+          // Drain unexpected file parts so the stream doesn't hang, then skip.
+          await part.toBuffer();
+          continue;
+        }
+        if (photoPaths.length >= MAX_PHOTOS_PER_STAFF) {
+          throw new BadRequestException(
+            `A staff member can have at most ${MAX_PHOTOS_PER_STAFF} photos`,
+          );
+        }
+        const savedPath = await this.uploadService.saveImage(part, 'staff');
+        photoPaths.push(savedPath);
+      } else {
+        fields[part.fieldname] = part.value as string;
+      }
+    }
+
+    const dto = plainToInstance(CreateStaffDto, {
+      name: fields.name,
+      roles:
+        typeof fields.roles === 'string'
+          ? fields.roles.split(',').map((r) => r.trim())
+          : fields.roles,
+    });
+
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+
+    return this.staffService.addWorker(dto, photoPaths);
   }
 
   @Delete(':id')

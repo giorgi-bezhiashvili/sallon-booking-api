@@ -5,11 +5,14 @@ export type StaffDocument = HydratedDocument<Staff>;
 
 @Schema({ timestamps: true })
 export class Staff {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   name!: string;
 
   @Prop({ type: [String], required: true })
   roles!: string[];
+
+  @Prop({ type: [String], default: [] })
+  photos!: string[];
 }
 
 export const StaffSchema = SchemaFactory.createForClass(Staff);
