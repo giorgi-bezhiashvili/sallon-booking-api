@@ -35,6 +35,9 @@ export class StaffController {
   // more "photos" file parts. Each photo is content-type checked and
   // virus-scanned before it's ever written to disk; only clean files are
   // saved, and only their paths go in the DB.
+  //
+  // TODO: remove this endpoint before production (staff will be managed
+  // some other way then) — see /booking work notes.
   @Post()
   async createStaff(@Req() req: FastifyRequest) {
     if (!req.isMultipart()) {
@@ -86,9 +89,10 @@ export class StaffController {
     return this.staffService.removeWorker(id);
   }
 
+  // TODO: remove before production, same as createStaff above.
   @Patch(':id')
-  updateOne(@Param('id') id: string, @Body() UpdateStaffDto: UpdateStaffDto) {
-    return this.staffService.update(id, UpdateStaffDto);
+  updateOne(@Param('id') id: string, @Body() updateStaffDto: UpdateStaffDto) {
+    return this.staffService.update(id, updateStaffDto);
   }
 
   @Get(':id')

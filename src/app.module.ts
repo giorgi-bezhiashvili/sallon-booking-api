@@ -9,7 +9,7 @@ import { MongooseModule } from '@nestjs/mongoose';
   imports: [
     StaffModule,
     BookingModule,
-    MongooseModule.forRoot('mongodb://localhost:27017/my-nest-db'),
+    MongooseModule.forRoot('mongodb://localhost:27017/sallon-booking-api'),
   ],
   controllers: [AppController],
   providers: [AppService],

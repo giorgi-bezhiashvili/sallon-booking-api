@@ -1,6 +1,10 @@
 @baseUrl = http://localhost:3000
 @boundary = ----SalonBoundary123456
 
+### =========================================================
+### STAFF
+### =========================================================
+
 ### 1. Create staff — no photos
 POST {{baseUrl}}/staff
 Content-Type: multipart/form-data; boundary={{boundary}}
@@ -58,7 +62,7 @@ Content-Type: image/png
 < ./test-files/photo2.png
 --{{boundary}}--
 
-### 4. Create staff — non-image file (now accepted, no type checking)
+### 4. Create staff — non-image file (not type-checked)
 POST {{baseUrl}}/staff
 Content-Type: multipart/form-data; boundary={{boundary}}
 
@@ -77,7 +81,7 @@ Content-Type: text/plain
 < ./test-files/notes.txt
 --{{boundary}}--
 
-### 5. Reject — too many photos (still enforced, MAX_PHOTOS_PER_STAFF = 5)
+### 5. Reject — too many photos (MAX_PHOTOS_PER_STAFF = 5)
 POST {{baseUrl}}/staff
 Content-Type: multipart/form-data; boundary={{boundary}}
 
@@ -136,7 +140,7 @@ GET {{baseUrl}}/staff
 ### 8. Get one staff (replace with a real id from a previous response)
 GET {{baseUrl}}/staff/REPLACE_WITH_ID
 
-### 9. Update staff (JSON — PATCH is unchanged, no photo support here)
+### 9. Update staff (JSON — PATCH, no photo support here)
 PATCH {{baseUrl}}/staff/REPLACE_WITH_ID
 Content-Type: application/json
 
@@ -147,3 +151,194 @@ Content-Type: application/json
 
 ### 10. Delete staff
 DELETE {{baseUrl}}/staff/REPLACE_WITH_ID
+
+
+### =========================================================
+### BOOKING
+### Replace REPLACE_WITH_STAFF_ID with a real staff _id (from #7/#8 above)
+### and REPLACE_WITH_BOOKING_ID with the bookingId returned by #11/#12.
+### The mock SMS logs the OTP to the server console — read it there.
+### =========================================================
+
+### 11. Request a slot — happy path (30 min, tomorrow 2pm)
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "6a8c779ee669090fba2968de",
+  "startTime": "2026-08-25T14:00:00.000Z",
+  "durationMinutes": 30,
+  "customerPhone": "+995555123456",
+  "customerName": "Giorgi"
+}
+
+### 12. Request a second, non-overlapping slot for the same staff
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "6a8c779ee669090fba2968de",
+  "startTime": "2026-08-25T15:00:00.000Z",
+  "durationMinutes": 45,
+  "customerPhone": "+995555987654",
+  "customerName": "Ana"
+}
+
+### 13. Reject — overlapping slot for the same staff (same window as #11)
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "6a8c779ee669090fba2968de",
+  "startTime": "2026-08-25T14:15:00.000Z",
+  "durationMinutes": 30,
+  "customerPhone": "+995555111222",
+  "customerName": "Luka"
+}
+
+### 14. Reject — duration over 60 minutes
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "REPLACE_WITH_STAFF_ID",
+  "startTime": "2026-08-25T16:00:00.000Z",
+  "durationMinutes": 90,
+  "customerPhone": "+995555111222",
+  "customerName": "Luka"
+}
+
+### 15. Reject — startTime in the past
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "6a8c779ee669090fba2968de",
+  "startTime": "2020-01-01T10:00:00.000Z",
+  "durationMinutes": 30,
+  "customerPhone": "+995555111222",
+  "customerName": "Luka"
+}
+
+### 16. Reject — invalid/unknown staffId
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "64f0a1b2c3d4e5f678901234",
+  "startTime": "2026-08-25T16:00:00.000Z",
+  "durationMinutes": 30,
+  "customerPhone": "+995555111222",
+  "customerName": "Luka"
+}
+
+### 17. Reject — malformed staffId (not a valid Mongo ObjectId)
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "not-a-valid-id",
+  "startTime": "2026-08-25T16:00:00.000Z",
+  "durationMinutes": 30,
+  "customerPhone": "+995555111222",
+  "customerName": "Luka"
+}
+
+### 18. Reject — invalid phone number (not E.164)
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "REPLACE_WITH_STAFF_ID",
+  "startTime": "2026-08-25T17:00:00.000Z",
+  "durationMinutes": 30,
+  "customerPhone": "0555123456",
+  "customerName": "Luka"
+}
+
+### 19. Verify OTP — happy path (copy the code from the server console log)
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "6a8c78e6e669090fba2968e9",
+  "otp": "762099"
+}
+
+### 20. Reject — wrong OTP code
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "6a8c784de669090fba2968e7",
+  "otp": "000000"
+}
+
+### 21. Reject — already-confirmed booking (run #19 first, then this again)
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "REPLACE_WITH_BOOKING_ID",
+  "otp": "123456"
+}
+
+### 22. Reject — unknown bookingId
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "64f0a1b2c3d4e5f678901234",
+  "otp": "123456"
+}
+
+### 23. Reject — malformed bookingId
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "not-a-valid-id",
+  "otp": "123456"
+}
+
+### 24. Reject — OTP wrong length
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "REPLACE_WITH_BOOKING_ID",
+  "otp": "12345"
+}
+
+### 25. Expired OTP flow — request a slot, wait 5+ minutes without
+### verifying, then try to verify it. Should return 410 Gone and the
+### slot should become bookable again (retry #11 with the same times).
+POST {{baseUrl}}/booking/request
+Content-Type: application/json
+
+{
+  "staffId": "REPLACE_WITH_STAFF_ID",
+  "startTime": "2026-08-25T18:00:00.000Z",
+  "durationMinutes": 30,
+  "customerPhone": "+995555333444",
+  "customerName": "ExpiryTest"
+}
+
+### 26. ...then after 5+ min, try verifying it (any 6-digit code) → 410 Gone
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "REPLACE_WITH_BOOKING_ID",
+  "otp": "123456"
+}
+
+### 27. Too many wrong attempts (run 5x with wrong code, then a 6th
+### attempt — even with the right code — should be 410 Gone)
+POST {{baseUrl}}/booking/verify
+Content-Type: application/json
+
+{
+  "bookingId": "REPLACE_WITH_BOOKING_ID",
+  "otp": "999999"
+}

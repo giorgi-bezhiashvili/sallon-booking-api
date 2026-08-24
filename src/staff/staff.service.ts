@@ -7,7 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Staff, StaffDocument } from '../schemas/staff.schema';
 import { CreateStaffDto } from './dto/create-staff.dto';
-import { UpdateStaffDto } from './dto/update-staff.dto'; // Make sure to create this DTO
+import { UpdateStaffDto } from './dto/update-staff.dto';
 
 @Injectable()
 export class StaffService {
@@ -17,8 +17,7 @@ export class StaffService {
 
   findAll() {
     try {
-      const staffMembers = this.staffModel.find();
-      return staffMembers;
+      return this.staffModel.find();
     } catch (err) {
       console.error(err);
       throw new InternalServerErrorException('Failed to find staff member');
@@ -27,8 +26,7 @@ export class StaffService {
 
   findOne(id: string) {
     try {
-      const staffMember = this.staffModel.findById(id);
-      return staffMember;
+      return this.staffModel.findById(id);
     } catch (err) {
       console.error(err);
       throw new InternalServerErrorException('Failed to find staff member');
@@ -53,8 +51,7 @@ export class StaffService {
 
   async removeWorker(id: string) {
     try {
-      const staff = await this.staffModel.findByIdAndDelete(id);
-      return staff;
+      return await this.staffModel.findByIdAndDelete(id);
     } catch (err) {
       console.error(err);
       throw new InternalServerErrorException('Failed to remove staff member');

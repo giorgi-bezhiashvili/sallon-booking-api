@@ -6,12 +6,19 @@ import {
 } from '@nestjs/platform-fastify';
 import fastifyMultipart from '@fastify/multipart';
 import { AppModule } from './app.module';
+import { join } from 'path'; // <-- დაამატეთ ეს იმპორტი
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
   );
+
+  // ჩართეთ /uploads საქაღალდის სტატიკურად მიწოდება
+  app.useStaticAssets({
+    root: join(__dirname, '..', 'uploads'), // მიუთითებს პროექტის ძირში არსებულ 'uploads' ფოლდერზე
+    prefix: '/uploads/', // URL მისამართის პრეფიქსი
+  });
 
   await app.register(fastifyMultipart, {
     limits: {
