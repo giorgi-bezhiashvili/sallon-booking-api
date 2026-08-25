@@ -23,8 +23,6 @@ export class RequestBookingDto {
   @Max(60)
   durationMinutes!: number;
 
-  // Expected in E.164 format, e.g. "+995555123456", since that's what the
-  // SMS provider needs to send the OTP.
   @IsPhoneNumber()
   customerPhone!: string;
 

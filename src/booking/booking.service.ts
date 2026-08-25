@@ -16,11 +16,12 @@ import { Staff, StaffDocument } from '../schemas/staff.schema';
 import { RequestBookingDto } from './dto/request-booking.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { SmsService } from '../sms/sms.service';
+import { hashOtp, otpMatches } from './otp.util';
 
 const OTP_TTL_MINUTES = 5;
 const MAX_OTP_ATTEMPTS = 5;
 const MAX_BOOKING_DURATION_MINUTES = 60;
-
+const MAX_BOOKING_WINDOW_DAYS = 7;
 @Injectable()
 export class BookingService {
   constructor(
@@ -51,6 +52,14 @@ export class BookingService {
     }
     if (startTime.getTime() < Date.now()) {
       throw new BadRequestException('startTime must be in the future');
+    }
+
+    const maxAllowedStart =
+      Date.now() + MAX_BOOKING_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    if (startTime.getTime() > maxAllowedStart) {
+      throw new BadRequestException(
+        `Bookings can only be made up to ${MAX_BOOKING_WINDOW_DAYS} days in advance`,
+      );
     }
 
     const endTime = new Date(
@@ -85,7 +94,7 @@ export class BookingService {
         startTime,
         endTime,
         status: BookingStatus.PENDING_OTP,
-        otpCode,
+        otpCode: hashOtp(otpCode),
         otpExpiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60_000),
         otpAttempts: 0,
       });
@@ -151,7 +160,7 @@ export class BookingService {
       );
     }
 
-    if (booking.otpCode !== dto.otp) {
+    if (!booking.otpCode || !otpMatches(dto.otp, booking.otpCode)) {
       booking.otpAttempts += 1;
       await booking.save();
       throw new BadRequestException('Incorrect OTP code');

@@ -5,13 +5,14 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import fastifyMultipart from '@fastify/multipart';
+import helmet from '@fastify/helmet';
 import { AppModule } from './app.module';
-import { join } from 'path'; // <-- დაამატეთ ეს იმპორტი
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({ bodyLimit: 1_048_576 }),
   );
 
   // ჩართეთ /uploads საქაღალდის სტატიკურად მიწოდება
@@ -27,10 +28,19 @@ async function bootstrap() {
     },
   });
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  await app.register(helmet);
 
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
+      transform: true,
+    }),
+  );
   await app.listen(3000, '0.0.0.0');
 }
+
 bootstrap().catch((err) => {
   console.log(err);
 });

@@ -8,7 +8,9 @@ export class SmsService {
   private readonly logger = new Logger(SmsService.name);
 
   async sendOtp(phone: string, code: string): Promise<void> {
-    this.logger.log(`[MOCK SMS] To ${phone}: your salon verification code is ${code}`);
+    this.logger.log(
+      `[MOCK SMS] To ${phone}: your salon verification code is ${code}`,
+    );
     return Promise.resolve();
   }
 }
