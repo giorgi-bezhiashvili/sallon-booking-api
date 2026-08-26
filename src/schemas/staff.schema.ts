@@ -13,6 +13,12 @@ export class Staff {
 
   @Prop({ type: [String], default: [] })
   photos!: string[];
+
+  @Prop({ required: true })
+  email!: string;
+
+  @Prop({ required: true })
+  description!: string;
 }
 
 export const StaffSchema = SchemaFactory.createForClass(Staff);

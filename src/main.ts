@@ -6,6 +6,7 @@ import {
 } from '@nestjs/platform-fastify';
 import fastifyMultipart from '@fastify/multipart';
 import helmet from '@fastify/helmet';
+import mongoSanitize from '@exortek/fastify-mongo-sanitize';
 import { AppModule } from './app.module';
 import { join } from 'path';
 
@@ -15,20 +16,25 @@ async function bootstrap() {
     new FastifyAdapter({ bodyLimit: 1_048_576 }),
   );
 
-  // ჩართეთ /uploads საქაღალდის სტატიკურად მიწოდება
   app.useStaticAssets({
-    root: join(__dirname, '..', 'uploads'), // მიუთითებს პროექტის ძირში არსებულ 'uploads' ფოლდერზე
-    prefix: '/uploads/', // URL მისამართის პრეფიქსი
+    root: join(__dirname, '..', 'uploads'),
+    prefix: '/uploads/',
   });
 
   await app.register(fastifyMultipart, {
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB per file, mirrors UploadService's own check
+      fileSize: 5 * 1024 * 1024,
       files: 5,
     },
   });
 
   await app.register(helmet);
+
+  await app.register(mongoSanitize, {
+    replaceWith: '_',
+    sanitizeObjects: ['body', 'params', 'query'],
+    recursive: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

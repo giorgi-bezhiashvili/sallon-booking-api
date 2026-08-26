@@ -52,7 +52,6 @@ export class StaffController {
     for await (const part of req.parts()) {
       if (part.type === 'file') {
         if (part.fieldname !== 'photos') {
-          // Drain unexpected file parts so the stream doesn't hang, then skip.
           await part.toBuffer();
           continue;
         }
@@ -64,7 +63,14 @@ export class StaffController {
         const savedPath = await this.uploadService.saveImage(part, 'staff');
         photoPaths.push(savedPath);
       } else {
-        fields[part.fieldname] = part.value as string;
+        const existing = fields[part.fieldname];
+        if (existing !== undefined) {
+          fields[part.fieldname] = Array.isArray(existing)
+            ? [...existing, part.value as string]
+            : [existing, part.value as string];
+        } else {
+          fields[part.fieldname] = part.value as string;
+        }
       }
     }
 
@@ -74,8 +80,9 @@ export class StaffController {
         typeof fields.roles === 'string'
           ? fields.roles.split(',').map((r) => r.trim())
           : fields.roles,
+      email: fields.email as string,
+      description: fields.description as string,
     });
-
     const errors = await validate(dto);
     if (errors.length > 0) {
       throw new BadRequestException(errors);

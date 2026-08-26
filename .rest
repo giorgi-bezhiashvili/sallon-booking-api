@@ -17,8 +17,15 @@ Nino
 Content-Disposition: form-data; name="roles"
 
 stylist,colorist
---{{boundary}}--
+--{{boundary}}
+Content-Disposition: form-data; name="email"
 
+giorgibezhiashvili5@gmail.com
+--{{boundary}}
+Content-Disposition: form-data; name="description"
+
+he is a good guy
+--{{boundary}}--
 ### 2. Create staff — one photo
 POST {{baseUrl}}/staff
 Content-Type: multipart/form-data; boundary={{boundary}}
@@ -131,7 +138,8 @@ Content-Type: application/json
 
 {
   "name": "ShouldFail",
-  "roles": ["stylist"]
+  "roles": ["stylist"],
+  "email": "giorgibezhiashvili@gmail.com"
 }
 
 ### 7. Get all staff
