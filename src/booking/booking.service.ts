@@ -16,6 +16,7 @@ import { Staff, StaffDocument } from '../schemas/staff.schema';
 import { RequestBookingDto } from './dto/request-booking.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { SmsService } from '../sms/sms.service';
+import { MailService } from '../mail/mail.service'; // Import MailService
 import { hashOtp, otpMatches } from './otp.util';
 
 const OTP_TTL_MINUTES = 5;
@@ -28,6 +29,7 @@ export class BookingService {
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
     @InjectModel(Staff.name) private staffModel: Model<StaffDocument>,
     private readonly smsService: SmsService,
+    private readonly mailService: MailService,
   ) {}
 
   async requestSlot(dto: RequestBookingDto) {
@@ -99,9 +101,6 @@ export class BookingService {
         otpAttempts: 0,
       });
     } catch (err) {
-      // Two requests for the exact same slot landing at once can both pass
-      // the findOne check above; let the DB be the final word and translate
-      // any resulting duplicate-key error into the same conflict response.
       if ((err as { code?: number })?.code === 11000) {
         throw new ConflictException(
           'This employee already has a booking that overlaps that time',
@@ -127,7 +126,11 @@ export class BookingService {
       throw new BadRequestException('Invalid booking id');
     }
 
-    const booking = await this.bookingModel.findById(dto.bookingId);
+    // Populate the staff object so we can read staff.email
+    const booking = await this.bookingModel
+      .findById(dto.bookingId)
+      .populate<{ staff: StaffDocument }>('staff');
+
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
@@ -166,20 +169,31 @@ export class BookingService {
       throw new BadRequestException('Incorrect OTP code');
     }
 
+    // Mark as confirmed
     booking.status = BookingStatus.CONFIRMED;
     booking.otpCode = undefined;
     booking.otpExpiresAt = undefined;
     await booking.save();
 
+    // Send notification email to the staff member
+    if (booking.staff && booking.staff.email) {
+      await this.mailService.sendBookingNotification(
+        booking.staff.email,
+        booking.customerPhone,
+        booking.customerName,
+        booking.startTime,
+        booking.endTime,
+      );
+    }
+
     return {
       bookingId: booking._id,
       status: booking.status,
-      staff: booking.staff,
+      staff: booking.staff._id,
       startTime: booking.startTime,
       endTime: booking.endTime,
     };
   }
-
   private async expireStaleHolds(staffId: string) {
     await this.bookingModel.updateMany(
       {

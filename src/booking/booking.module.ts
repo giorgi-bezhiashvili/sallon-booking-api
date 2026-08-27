@@ -7,6 +7,7 @@ import { Staff, StaffSchema } from '../schemas/staff.schema';
 import { SmsModule } from '../sms/sms.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { MailModule } from '../mail/mail.module';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -14,6 +15,7 @@ import { APP_GUARD } from '@nestjs/core';
       { name: Staff.name, schema: StaffSchema },
     ]),
     SmsModule,
+    MailModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]), // 20 req/min default
   ],
   controllers: [BookingController],

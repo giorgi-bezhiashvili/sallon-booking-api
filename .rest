@@ -173,8 +173,8 @@ POST {{baseUrl}}/booking/request
 Content-Type: application/json
 
 {
-  "staffId": "6a8c779ee669090fba2968de",
-  "startTime": "2026-08-25T14:00:00.000Z",
+  "staffId": "6a8e9dc2b85bca7ed8d44e08",
+  "startTime": "2026-08-30T14:00:00.000Z",
   "durationMinutes": 30,
   "customerPhone": "+995555123456",
   "customerName": "Giorgi"
@@ -269,8 +269,8 @@ POST {{baseUrl}}/booking/verify
 Content-Type: application/json
 
 {
-  "bookingId": "6a8c78e6e669090fba2968e9",
-  "otp": "762099"
+  "bookingId": "6a8ffb5aa5ba221bb92e444c",
+  "otp": "405314"
 }
 
 ### 20. Reject — wrong OTP code

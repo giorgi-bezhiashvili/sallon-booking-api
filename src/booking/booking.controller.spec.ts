@@ -5,6 +5,7 @@ import { BookingService } from './booking.service';
 import { Booking } from '../schemas/booking.schema';
 import { Staff } from '../schemas/staff.schema';
 import { SmsService } from '../sms/sms.service';
+import { MailService } from '../mail/mail.service';
 
 describe('BookingController', () => {
   let controller: BookingController;
@@ -17,6 +18,7 @@ describe('BookingController', () => {
         { provide: getModelToken(Booking.name), useValue: {} },
         { provide: getModelToken(Staff.name), useValue: {} },
         { provide: SmsService, useValue: { sendOtp: jest.fn() } },
+        { provide: MailService, useValue: {} },
       ],
     }).compile();
 
