@@ -11,17 +11,19 @@ import {
   Booking,
   BookingDocument,
   BookingStatus,
+  Service,
 } from '../schemas/booking.schema';
 import { Staff, StaffDocument } from '../schemas/staff.schema';
 import { RequestBookingDto } from './dto/request-booking.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { SmsService } from '../sms/sms.service';
-import { MailService } from '../mail/mail.service'; // Import MailService
+import { MailService } from '../mail/mail.service';
 import { hashOtp, otpMatches } from './otp.util';
 
 const OTP_TTL_MINUTES = 5;
 const MAX_OTP_ATTEMPTS = 5;
-const MAX_BOOKING_DURATION_MINUTES = 60;
+const SLOT_DURATION_MINUTES = 30;
+const MIN_ADVANCE_HOURS = 2;
 const MAX_BOOKING_WINDOW_DAYS = 7;
 @Injectable()
 export class BookingService {
@@ -33,9 +35,9 @@ export class BookingService {
   ) {}
 
   async requestSlot(dto: RequestBookingDto) {
-    if (dto.durationMinutes > MAX_BOOKING_DURATION_MINUTES) {
+    if (dto.durationMinutes !== SLOT_DURATION_MINUTES) {
       throw new BadRequestException(
-        `Bookings can be at most ${MAX_BOOKING_DURATION_MINUTES} minutes`,
+        `Bookings must be exactly ${SLOT_DURATION_MINUTES} minutes`,
       );
     }
 
@@ -52,8 +54,27 @@ export class BookingService {
     if (Number.isNaN(startTime.getTime())) {
       throw new BadRequestException('Invalid startTime');
     }
-    if (startTime.getTime() < Date.now()) {
-      throw new BadRequestException('startTime must be in the future');
+
+    // 2. Enforce 30-minute interval alignment (:00 or :30)
+    const minutes = startTime.getMinutes();
+    const seconds = startTime.getSeconds();
+    const milliseconds = startTime.getMilliseconds();
+    if (
+      (minutes !== 0 && minutes !== 30) ||
+      seconds !== 0 ||
+      milliseconds !== 0
+    ) {
+      throw new BadRequestException(
+        'Booking start time must align with a 30-minute slot (e.g., 10:00 or 10:30)',
+      );
+    }
+
+    // 3. Enforce minimum 2-hour advance booking lead time
+    const minAllowedStart = Date.now() + MIN_ADVANCE_HOURS * 60 * 60 * 1000;
+    if (startTime.getTime() < minAllowedStart) {
+      throw new BadRequestException(
+        `Bookings must be made at least ${MIN_ADVANCE_HOURS} hours in advance`,
+      );
     }
 
     const maxAllowedStart =
@@ -68,8 +89,7 @@ export class BookingService {
       startTime.getTime() + dto.durationMinutes * 60_000,
     );
 
-    // Free up any of this staff's holds whose OTP window already lapsed,
-    // so a customer who never verified doesn't permanently block the slot.
+    // Free up any of this staff's holds whose OTP window already lapsed
     await this.expireStaleHolds(dto.staffId);
 
     const overlapping = await this.bookingModel.findOne({
@@ -91,6 +111,8 @@ export class BookingService {
     try {
       booking = await this.bookingModel.create({
         staff: dto.staffId,
+        service: dto.service,
+        sex: dto.sex,
         customerPhone: dto.customerPhone,
         customerName: dto.customerName,
         startTime,
@@ -113,6 +135,8 @@ export class BookingService {
 
     return {
       bookingId: booking._id,
+      service: booking.service,
+      sex: booking.sex,
       status: booking.status,
       startTime: booking.startTime,
       endTime: booking.endTime,
@@ -126,7 +150,6 @@ export class BookingService {
       throw new BadRequestException('Invalid booking id');
     }
 
-    // Populate the staff object so we can read staff.email
     const booking = await this.bookingModel
       .findById(dto.bookingId)
       .populate<{ staff: StaffDocument }>('staff');
@@ -183,16 +206,25 @@ export class BookingService {
         booking.customerName,
         booking.startTime,
         booking.endTime,
+        booking.service as Service,
+        booking.sex,
       );
     }
 
     return {
       bookingId: booking._id,
+      service: booking.service,
       status: booking.status,
       staff: booking.staff._id,
       startTime: booking.startTime,
       endTime: booking.endTime,
     };
+  }
+  async getSlots() {
+    const slots = await this.bookingModel
+      .find()
+      .populate('startTime', 'endTime');
+    return slots;
   }
   private async expireStaleHolds(staffId: string) {
     await this.bookingModel.updateMany(

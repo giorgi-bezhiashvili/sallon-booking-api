@@ -11,7 +11,14 @@ export enum BookingStatus {
   EXPIRED = 'expired',
   CANCELLED = 'cancelled',
 }
-
+export enum Sex {
+  MALE = 'male',
+  FEMALE = 'female',
+}
+export enum Service {
+  HAIRCUT = 'თმის შეჭრა',
+  HAIRWASH = 'თმის დაბანა',
+}
 @Schema({ timestamps: true })
 export class Booking {
   @Prop({ type: Types.ObjectId, ref: 'Staff', required: true, index: true })
@@ -45,6 +52,12 @@ export class Booking {
 
   @Prop({ default: 0 })
   otpAttempts!: number;
+
+  @Prop({ required: true })
+  service!: string;
+
+  @Prop({ required: true, enum: Sex, type: String })
+  sex!: Sex;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

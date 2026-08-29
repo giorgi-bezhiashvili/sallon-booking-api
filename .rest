@@ -177,7 +177,9 @@ Content-Type: application/json
   "startTime": "2026-08-30T14:00:00.000Z",
   "durationMinutes": 30,
   "customerPhone": "+995555123456",
-  "customerName": "Giorgi"
+  "customerName": "Giorgi",
+  "service":"თმის შეჭრა",
+  "sex":"male"
 }
 
 ### 12. Request a second, non-overlapping slot for the same staff
@@ -269,8 +271,8 @@ POST {{baseUrl}}/booking/verify
 Content-Type: application/json
 
 {
-  "bookingId": "6a8ffb5aa5ba221bb92e444c",
-  "otp": "405314"
+  "bookingId": "6a900746854b38941a0abea4",
+  "otp": "461281"
 }
 
 ### 20. Reject — wrong OTP code
