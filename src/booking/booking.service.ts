@@ -88,7 +88,15 @@ export class BookingService {
     const endTime = new Date(
       startTime.getTime() + dto.durationMinutes * 60_000,
     );
+    const startHour = startTime.getHours();
+    const endHour = endTime.getHours();
+    const endMinutes = endTime.getMinutes();
 
+    if (startHour < 8 || endHour > 22 || (endHour === 22 && endMinutes > 0)) {
+      throw new BadRequestException(
+        'Bookings must be scheduled between 8:00 AM and 10:00 PM',
+      );
+    }
     // Free up any of this staff's holds whose OTP window already lapsed
     await this.expireStaleHolds(dto.staffId);
 
